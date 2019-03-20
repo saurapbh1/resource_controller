@@ -1,0 +1,47 @@
+version: '3'
+
+volumes:
+ resource-ctrl-db-vol:
+
+services:
+  redis:
+    image: redis
+    command: redis-server --requirepass doctorAppRedis
+    ports:
+      - 6378:6379
+    restart: always
+  mysql:
+    image: mysql:5.7
+    volumes:
+      - resource-ctrl-db-vol:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: resource
+      MYSQL_DATABASE: resource_ctrl
+    ports:
+      - 3308:3306
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    environment:
+      PMA_HOST: mysql
+      MYSQL_USER: root
+      MYSQL_PASSWORD: resource
+    ports:
+      - 8070:80
+    depends_on:
+      - mysql
+  www:
+    image: ajitemsahasrabuddhe/php-apache:bionic-7.3-dev
+    ports:
+      - 81:80
+    volumes:
+      - ./:/var/www/html
+      - ./000-default.conf:/etc/apache2/sites-available/000-default.conf
+      - ./supervisord.conf:/etc/supervisor/supervisord.conf
+      - ./crontab:/etc/cron/cron
+      - ./xdebug.ini:/etc/php/7.2/apache2/conf.d/20-xdebug.ini
+    environment:
+      XDEBUG_CONFIG: remote_host=172.17.0.1
+    restart: always
+    depends_on:
+      - redis
+      - mysql
